@@ -9,7 +9,6 @@ function App() {
     <Provider store={store}>
       <div className="App">
         <TaskDashboard />
-        <h1>Hello World</h1>
       </div>
     </Provider>
   );

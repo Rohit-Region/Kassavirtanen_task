@@ -1,108 +1,116 @@
-// Main Dashboard Component
-// TODO: Implement the main container component
-
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import TaskForm from './TaskForm';
 import TaskList from './TaskList';
 import FilterBar from './FilterBar';
-
-// TODO: Import selectors and actions
-// import { 
-//   selectAllTasks,
-//   selectFilteredTasks,
-//   selectTaskFormState,
-//   selectUsers,
-//   selectProjects,
-//   selectFilters,
-//   selectLoading,
-//   selectErrors
-// } from '../store/selectors';
-
-// import {
-//   fetchTasksRequest,
-//   createTaskRequest,
-//   updateTaskRequest,
-//   deleteTaskRequest,
-//   openTaskForm,
-//   closeTaskForm,
-//   setFilters
-// } from '../store/actions';
+import {
+  selectTasksWithAssignees,
+  selectUsersArray,
+  selectProjectsArray,
+  selectTaskForm,
+  selectFilters,
+  selectLoading,
+  selectErrors,
+  selectTaskById,
+} from '../store/selectors';
+import {
+  fetchTasksRequest,
+  createTaskRequest,
+  updateTaskRequest,
+  deleteTaskRequest,
+} from '../store/actions/taskActions';
+import { fetchUsersRequest, fetchProjectsRequest } from '../store/actions/referenceActions';
+import { openTaskForm, closeTaskForm, setFilters } from '../store/actions/uiActions';
 
 const TaskDashboard = () => {
   const dispatch = useDispatch();
+  const tasks = useSelector(selectTasksWithAssignees);
+  const users = useSelector(selectUsersArray);
+  const projects = useSelector(selectProjectsArray);
+  const taskForm = useSelector(selectTaskForm);
+  const filters = useSelector(selectFilters);
+  const loading = useSelector(selectLoading);
+  const errors = useSelector(selectErrors);
+  const editingTask = useSelector(selectTaskById(taskForm.taskId));
 
-  // TODO: Connect to Redux state using useSelector
-  
-  // TODO: Fetch initial data on component mount
-  
-  // TODO: Refetch tasks when filters change
+  useEffect(() => {
+    dispatch(fetchUsersRequest());
+    dispatch(fetchProjectsRequest());
+    dispatch(fetchTasksRequest(filters));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap once with initial filters
+  }, [dispatch]);
 
-  // TODO: Implement event handlers
+  const handleFiltersChange = useCallback(
+    (nextFilters) => {
+      dispatch(setFilters(nextFilters));
+      dispatch(fetchTasksRequest(nextFilters));
+    },
+    [dispatch]
+  );
+
   const handleCreateTask = () => {
-    // TODO: Dispatch open form action for create mode
+    dispatch(openTaskForm('create', null));
   };
 
   const handleEditTask = (taskId) => {
-    // TODO: Dispatch open form action for edit mode
+    dispatch(openTaskForm('edit', taskId));
   };
 
   const handleDeleteTask = (taskId) => {
-    // TODO: Show confirmation and dispatch delete action
+    if (window.confirm('Delete this task?')) {
+      dispatch(deleteTaskRequest(taskId));
+    }
   };
 
-  const handleFormSubmit = (formData) => {
-    // TODO: Dispatch create or update action based on form mode
+  const handleFormSubmit = (formPayload) => {
+    if (taskForm.mode === 'edit' && taskForm.taskId) {
+      dispatch(updateTaskRequest(taskForm.taskId, formPayload));
+    } else {
+      dispatch(createTaskRequest(formPayload));
+    }
   };
 
   const handleFormClose = () => {
-    // TODO: Dispatch close form action and clear localStorage
-  };
-
-  const handleFiltersChange = (newFilters) => {
-    // TODO: Dispatch filter change action
+    dispatch(closeTaskForm());
   };
 
   return (
     <div className="task-dashboard">
       <header className="dashboard-header">
         <h1>Task Management Dashboard</h1>
-        <button 
-          className="create-task-btn"
-          onClick={handleCreateTask}
-        >
+        <button type="button" className="create-task-btn" onClick={handleCreateTask}>
           + Create Task
         </button>
       </header>
 
-      {/* TODO: Show error messages */}
-      {/* {errors.tasks && (
-        <div className="error-banner">
+      {errors.tasks && (
+        <div className="error-banner" role="alert">
           Error: {errors.tasks}
         </div>
-      )} */}
+      )}
 
       <FilterBar
-        // filters={filters}
-        // projects={projects}
-        // users={users}
+        filters={filters}
+        projects={projects}
+        users={users}
         onFiltersChange={handleFiltersChange}
       />
 
       <TaskList
-        // tasks={tasks}
-        // loading={loading.tasks}
+        tasks={tasks}
+        loading={loading.tasks}
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
       />
 
       <TaskForm
-        // isOpen={taskForm.isOpen}
-        // mode={taskForm.mode}
-        // initialData={taskForm.taskId ? tasks.find(t => t.id === taskForm.taskId) : null}
-        // users={users}
-        // projects={projects}
-        // loading={loading.tasks}
+        isOpen={taskForm.isOpen}
+        mode={taskForm.mode}
+        initialData={taskForm.mode === 'edit' ? editingTask : null}
+        users={users}
+        projects={projects}
+        loading={loading.saveTask}
+        errorMessage={errors.form}
         onSubmit={handleFormSubmit}
         onClose={handleFormClose}
       />
